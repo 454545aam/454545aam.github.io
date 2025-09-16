@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>454545aam — Página personal</title>
+  <style>
+    /* Reset */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+
+    /* Layout */
+    body{
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      color:#e6e6e6;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#0b0b0d;
+      position:relative;
+    }
+
+    /* Animated gradient background (infinite) */
+    .animated-bg{
+      position:fixed;
+      inset:0;
+      z-index:0;
+      background: linear-gradient(120deg, #0b0b0d 0%, #101214 25%, #14161a 50%, #0e1114 75%, #0b0b0d 100%);
+      background-size: 600% 600%;
+      animation: gradientShift 18s linear infinite;
+      filter: saturate(0.9) contrast(1.02);
+      mix-blend-mode: screen;
+    }
+
+    @keyframes gradientShift{
+      0%{background-position:0% 50%}
+      50%{background-position:100% 50%}
+      100%{background-position:0% 50%}
+    }
+
+    /* Subtle vignette */
+    .vignette{
+      position:fixed;inset:0;pointer-events:none;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.5) 100%);
+      z-index:3;
+    }
+
+    /* Center card / intro */
+    .hero{
+      position:relative;
+      z-index:10;
+      text-align:center;
+      padding:3rem 2rem;
+      backdrop-filter: blur(6px) saturate(0.8);
+      border-radius:18px;
+      min-width:320px;
+      transform: translateY(0);
+    }
+
+    h1{
+      font-size: clamp(2.2rem, 6vw, 6rem);
+      letter-spacing: 0.08em;
+      margin-bottom:0.4rem;
+      line-height:0.95;
+      color: #e9eef8;
+      text-shadow: 0 8px 40px rgba(69,69,69,0.12), 0 2px 8px rgba(0,0,0,0.6);
+    }
+
+    /* Glow effect for the name */
+    .name-glow{
+      display:inline-block;
+      padding:0.2rem 0.6rem;
+      border-radius:10px;
+      background: linear-gradient(90deg, rgba(69,69,69,0.06), rgba(255,255,255,0.02));
+      box-shadow: 0 6px 30px rgba(10,12,15,0.6);
+    }
+
+    /* Accent tagline */
+    p.lead{
+      margin-top:0.6rem;
+      opacity:0.8;
+      font-size:1rem;
+    }
+
+    /* Canvas sits behind text for particle animation */
+    canvas#particles{
+      position:fixed;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;
+    }
+
+    /* Small responsive tweak */
+    @media (max-width:420px){
+      .hero{padding:2rem 1rem}
+      h1{font-size:2.4rem}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Animated gradient background layer -->
+  <div class="animated-bg" aria-hidden="true"></div>
+
+  <!-- Canvas for moving particles -->
+  <canvas id="particles" aria-hidden="true"></canvas>
+
+  <!-- Content -->
+  <main class="hero" role="main">
+    <h1 class="name-glow">454545aam</h1>
+    <p class="lead">Bienvenido — esta es mi página personal</p>
+  </main>
+
+  <!-- Vignette to darken edges -->
+  <div class="vignette" aria-hidden="true"></div>
+
+  <script>
+    // Particle background - subtle, infinite, dark-toned
+    (function(){
+      const canvas = document.getElementById('particles');
+      const ctx = canvas.getContext('2d');
+      let w = canvas.width = innerWidth;
+      let h = canvas.height = innerHeight;
+      const palette = ['#2b2f33','#3b3f44','#454545','#5a5f66']; // dark tones
+
+      const particles = [];
+      const PARTICLE_COUNT = Math.max(28, Math.floor((w*h)/60000));
+
+      function rand(min,max){ return Math.random()*(max-min)+min }
+
+      function createParticle(){
+        return {
+          x: rand(0,w),
+          y: rand(0,h),
+          r: rand(0.8,3.2),
+          speed: rand(0.02,0.6),
+          angle: rand(0,Math.PI*2),
+          hue: palette[Math.floor(Math.random()*palette.length)],
+          drift: rand(-0.2,0.2),
+          alpha: rand(0.08,0.45)
+        }
+      }
+
+      for(let i=0;i<PARTICLE_COUNT;i++) particles.push(createParticle());
+
+      function resize(){
+        w = canvas.width = innerWidth;
+        h = canvas.height = innerHeight;
+      }
+      addEventListener('resize', ()=>{
+        resize();
+      });
+
+      let last = performance.now();
+      function loop(now){
+        const dt = (now - last) / 16.666; // relative to 60fps
+        last = now;
+
+        ctx.clearRect(0,0,w,h);
+
+        // Draw a subtle radial glow behind center
+        const grd = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)*0.08, w/2, h/2, Math.max(w,h));
+        grd.addColorStop(0, 'rgba(255,255,255,0.02)');
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0,0,w,h);
+
+        for(let p of particles){
+          p.y -= p.speed * dt; // float up
+          p.x += Math.sin(now * 0.0005 + p.angle) * p.drift * dt;
+          p.alpha += Math.sin(now * 0.001 + p.r) * 0.0005; // tiny alpha flicker
+          if(p.alpha < 0.03) p.alpha = 0.03;
+
+          // recycle
+          if(p.y + p.r < -10){
+            Object.assign(p, createParticle());
+            p.y = h + 10;
+          }
+
+          ctx.beginPath();
+          ctx.fillStyle = p.hue;
+          ctx.globalAlpha = p.alpha;
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+          ctx.fill();
+        }
+
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(loop);
+      }
+
+      requestAnimationFrame(loop);
+
+      // Reduce motion if user prefers reduced motion
+      const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      if(mq.matches){
+        // stop animations: draw a static soft background
+        ctx.clearRect(0,0,w,h);
+        ctx.fillStyle = '#0b0b0d';
+        ctx.fillRect(0,0,w,h);
+      }
+
+    })();
+  </script>
+
+</body>
+</html>
